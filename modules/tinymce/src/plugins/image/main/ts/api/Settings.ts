@@ -43,6 +43,10 @@ const getImageList = (editor: Editor) => {
   return editor.getParam('image_list', false);
 };
 
+const hasUploadTabOnly = function (editor) {
+  return !!editor.getParam('images_uploadtab_only', false);
+};
+
 const hasUploadUrl = (editor: Editor) => {
   return !!getUploadUrl(editor);
 };
@@ -77,6 +81,7 @@ export default {
   hasImageTitle,
   hasImageCaption,
   getImageList,
+  hasUploadTabOnly,
   hasUploadUrl,
   hasUploadHandler,
   getUploadUrl,

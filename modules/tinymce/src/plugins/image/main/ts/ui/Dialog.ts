@@ -285,8 +285,22 @@ const changeFileInput = (helpers: Helpers, info: ImageDialogInfo, state: ImageDi
       Utils.blobToDataUri(file).then((dataUrl) => {
         const blobInfo = helpers.createBlobCache(file, blobUri, dataUrl);
         uploader.upload(blobInfo).then((url: string) => {
-          api.setData({ src: { value: url, meta: { } } });
-          api.showTab('general');
+          // api.setData({ src: { value: url, meta: { } } });
+          // api.showTab('general');
+          api.setData({
+            src: {
+              value: url,
+              meta: info.hasUploadTabOnly ? { alt: file.name } : { }
+            }
+          });
+          if (info.hasUploadTabOnly) {
+            const filenameInput = document.getElementById('tox-image-upload-input-filename');
+            if (filenameInput) {
+              (filenameInput as HTMLInputElement).value = file.name;
+            }
+          } else {
+            api.showTab('General');
+          }
           changeSrc(helpers, info, state, api);
           finalize();
         }).catch((err) => {
@@ -319,7 +333,7 @@ const closeHandler = (state: ImageDialogState) => () => {
 };
 
 const makeDialogBody = (info: ImageDialogInfo) => {
-  if (info.hasAdvTab || info.hasUploadUrl || info.hasUploadHandler) {
+  if (!info.hasUploadTabOnly && (info.hasAdvTab || info.hasUploadUrl || info.hasUploadHandler)) {
     const tabPanel: Types.Dialog.TabPanelApi = {
       type: 'tabpanel',
       tabs: Arr.flatten([
@@ -332,7 +346,11 @@ const makeDialogBody = (info: ImageDialogInfo) => {
   } else {
     const panel: Types.Dialog.PanelApi = {
       type: 'panel',
-      items: MainTab.makeItems(info)
+      // items: MainTab.makeItems(info)
+      items: [
+        ...(info.hasUploadTabOnly && (info.hasUploadUrl || info.hasUploadHandler) ? UploadTab.makeTab(info).items : []),
+        ...MainTab.makeItems(info),
+      ]
     };
     return panel;
   }
@@ -429,6 +447,29 @@ export const Dialog = (editor: Editor) => {
   };
   const open = () => collect(editor).map(makeDialog(helpers)).get((spec) => {
     editor.windowManager.open(spec);
+
+    if (editor.settings.images_uploadtab_only) {
+      const content = document.querySelector('.tox-dialog__body-content .tox-form');
+      if (content) {
+        content.childNodes.forEach((child: HTMLElement) => {
+          if (!child.classList.contains('tox-form__group--stretched')) {
+            child.style.display = 'none';
+          }
+        });
+
+        const filenameInput = document.createElement('input');
+        filenameInput.id = 'tox-image-upload-input-filename';
+        filenameInput.classList.add('tox-textfield');
+        filenameInput.disabled = true;
+        filenameInput.value = spec.initialData.alt;
+
+        const formGroup = document.createElement('div');
+        formGroup.classList.add('tox-form__group');
+
+        formGroup.appendChild(filenameInput);
+        content.parentNode.appendChild(formGroup);
+      }
+    }
   });
 
   return {
